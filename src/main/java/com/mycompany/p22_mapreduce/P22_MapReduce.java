@@ -26,10 +26,12 @@ public class P22_MapReduce {
 
         public void map(LongWritable key, Text value, Context context) {
             try {
-                String[] str = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -2);
-                String subject = str[2];
-                if (!("subject".equals(subject))) {
-                    context.write(new Text(subject), one);
+                // Tengo comprobado que separa bien la regex
+                String[] str = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -2); // --> Regex para no coger las comas que están dentro de unas comillas 
+                // El -2 indica que se incluirán todos los elementos del texto, incluso si hay campos vacíos al final.
+//                String subject = str[2];
+                if (!("subject".equals(str[2]))) { // Para saltarnos el valor literal "subject" de la primera línea
+                    context.write(new Text(str[2]), one);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -65,7 +67,7 @@ public class P22_MapReduce {
                     job.setJarByClass(P22_MapReduce.class);
                     job.setMapperClass(MapClass.class);
                     job.setMapOutputKeyClass(Text.class);
-                    job.setMapOutputValueClass(Text.class);
+                    job.setMapOutputValueClass(IntWritable.class);
 
                     //set partitioner statement
 //                    job.setPartitionerClass(CaderPartitioner.class);
@@ -74,9 +76,9 @@ public class P22_MapReduce {
                     job.setInputFormatClass(TextInputFormat.class);
                     job.setOutputFormatClass(TextOutputFormat.class);
                     job.setOutputKeyClass(Text.class);
-                    job.setOutputValueClass(Text.class);
+                    job.setOutputValueClass(IntWritable.class);
                     FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews"));
-                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_Salida6"));
+                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_Salida2"));
                     boolean finalizado = job.waitForCompletion(true);
                     System.out.println("Finalizado: " + finalizado);
                     return null;
