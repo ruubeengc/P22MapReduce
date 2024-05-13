@@ -28,5 +28,11 @@
             <artifactId>hadoop-client</artifactId>
             <version>3.1.2</version>
         </dependency>
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>5.5.2</version> <!-- Asegúrate de usar la última versión disponible -->
+            <type>jar</type>
+        </dependency>
     </dependencies>
 </project>

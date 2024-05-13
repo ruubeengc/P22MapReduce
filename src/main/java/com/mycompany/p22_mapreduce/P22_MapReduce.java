@@ -27,11 +27,11 @@ public class P22_MapReduce {
         public void map(LongWritable key, Text value, Context context) {
             try {
                 // Tengo comprobado que separa bien la regex
-                String[] str = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -2); // --> Regex para no coger las comas que están dentro de unas comillas 
+                String[] str = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))", -2); // --> Regex para no coger las comas que están dentro de unas comillas 
                 // El -2 indica que se incluirán todos los elementos del texto, incluso si hay campos vacíos al final.
-//                String subject = str[2];
-                if (!("subject".equals(str[2]))) { // Para saltarnos el valor literal "subject" de la primera línea
-                    context.write(new Text(str[2]), one);
+                String subject = str[2];
+                if (!(subject.equals("subject"))) { // Para saltarnos el valor literal "subject" de la primera línea
+                    context.write(new Text(subject), one);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -53,6 +53,29 @@ public class P22_MapReduce {
             }
         }
     }
+    
+    public static class CaderPartitioner extends Partitioner<Text, Text> {
+
+        @Override
+        public int getPartition(Text key, Text value, int numReduceTasks) {
+            // Entrada partitioner: los datos completos en una colección de pares clave-valor.
+            
+            String[] str = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))", -2);
+            String[] date = str[3].split(",");
+            int year = Integer.parseInt(date[1]);
+            if (numReduceTasks == 0) {
+                return 0;
+            }
+            // "Partimos" los datos según los criterios de edad que se nos idican:
+            if (year <= 2015) {
+                return 0;
+            } else if (year > 2015 && year <= 2016) {
+                return 1 % numReduceTasks;
+            } else {
+                return 2 % numReduceTasks;
+            }
+        }
+    }
 
     public static void main(String[] args) {
 // Establecemos las configuraciones correspondientes añadiendo las de los partitioners:
@@ -70,7 +93,7 @@ public class P22_MapReduce {
                     job.setMapOutputValueClass(IntWritable.class);
 
                     //set partitioner statement
-//                    job.setPartitionerClass(CaderPartitioner.class);
+                    job.setPartitionerClass(CaderPartitioner.class);
                     job.setReducerClass(ReduceClass.class);
                     job.setNumReduceTasks(3);
                     job.setInputFormatClass(TextInputFormat.class);
@@ -78,7 +101,7 @@ public class P22_MapReduce {
                     job.setOutputKeyClass(Text.class);
                     job.setOutputValueClass(IntWritable.class);
                     FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews"));
-                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_Salida2"));
+                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionado"));
                     boolean finalizado = job.waitForCompletion(true);
                     System.out.println("Finalizado: " + finalizado);
                     return null;
