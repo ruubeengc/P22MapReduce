@@ -18,6 +18,15 @@ public class CustomMinMaxTuple implements Writable{
     private Double min = Double.valueOf(0);
     private Double max = Double.valueOf(0);
     private long count = 1;
+    private int year = Integer.valueOf(2024); // Por defecto
+
+    public int getYear() {
+        return year;
+    }
+
+    public void setYear(int year) {
+        this.year = year;
+    }
 
     public Double getMin() {
         return min;
@@ -47,15 +56,17 @@ public class CustomMinMaxTuple implements Writable{
         min = in.readDouble();
         max = in.readDouble();
         count = in.readLong();
+        year = in.readInt();
     }
 
     public void write(DataOutput out) throws IOException { // Escribe en el archivo los valores
         out.writeDouble(min);
         out.writeDouble(max);
         out.writeLong(count);
+        out.writeInt(year);
     }
 
     public String toString() {
-        return min + "\t" + max + "\t" + count;
+        return min + "\t" + max + "\t" + count + "\t" + year;
     }
 }
