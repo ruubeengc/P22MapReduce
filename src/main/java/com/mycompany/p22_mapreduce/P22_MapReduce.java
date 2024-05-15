@@ -26,15 +26,11 @@ public class P22_MapReduce {
 //        private CustomMinMaxTuple outTuple = new CustomMinMaxTuple();
 //        private Text subject = new Text();
 //        private static final long UNO = 1L;
-        
         public void map(LongWritable key, Text value, Context context) {
             try {
                 // Tengo comprobado que separa bien la regex
                 String[] str = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))", -2); // --> Regex para no coger las comas que están dentro de unas comillas 
                 // El -2 indica que se incluirán todos los elementos del texto, incluso si hay campos vacíos al final.
-                String[] date = str[3].split(", ");
-                String year = date[1].replace("\"", "");
-                int yearInt = Integer.parseInt(year);
                 String subject = str[2];
 
                 if (!(subject.equals("subject"))) { // Para saltarnos el valor literal "subject" de la primera línea
@@ -43,9 +39,13 @@ public class P22_MapReduce {
 //                    
 //                    System.out.println(yearInt);
 //                    outTuple.setYear(yearInt);
+                    String[] date = str[3].split(", ");
+                    String year = date[1].replace("\"", "");
+                    int yearInt = Integer.parseInt(year);
                     context.write(new Text(subject), new IntWritable(yearInt));
                 }
             } catch (Exception e) {
+                System.err.println(value.toString());
                 e.printStackTrace();
             }
         }
@@ -55,7 +55,7 @@ public class P22_MapReduce {
 //        private CustomMinMaxTuple resultado = new CustomMinMaxTuple();
 
         public void reduce(Text key, Iterable<IntWritable> values, Context context) {
-            
+
             try {
 //                resultado.setCount(0);
 //                
@@ -66,14 +66,15 @@ public class P22_MapReduce {
 //                }
 //                context.write(key, resultado);
                 int sum = 0;
-                for (IntWritable val : values){
+                for (IntWritable val : values) {
                     sum += 1;
 //                    String[] datos = val.toString().split(",");
 //                    String subject = datos[0];
-                    
+
                 }
                 System.out.println("Suma es:" + sum);
-                context.write(key, new IntWritable(sum));
+                System.out.println("La key es: " + key.toString());
+                context.write(key, new IntWritable(sum)); // --> No escribe todas las keys
 //                
 //                int sum = 0;
 //                for (IntWritable val : values) {
@@ -85,7 +86,7 @@ public class P22_MapReduce {
             }
         }
     }
-    
+
 //    public static class CaderPartitioner extends Partitioner<Text, IntWritable> {
 //
 //        @Override
@@ -106,7 +107,6 @@ public class P22_MapReduce {
 //            }
 //        }
 //    }
-
     public static void main(String[] args) {
 // Establecemos las configuraciones correspondientes añadiendo las de los partitioners:
         UserGroupInformation ugi = UserGroupInformation.createRemoteUser("a_83026");
@@ -126,14 +126,13 @@ public class P22_MapReduce {
 
                     //set partitioner statement
 //                    job.setPartitionerClass(CaderPartitioner.class);
-                    
 //                    job.setNumReduceTasks(1);
 //                    job.setInputFormatClass(TextInputFormat.class);
 //                    job.setOutputFormatClass(TextOutputFormat.class);
 //                    job.setOutputKeyClass(Text.class);
 //                    job.setOutputValueClass(IntWritable.class);
                     FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews"));
-                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionado16"));
+                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionado4"));
                     boolean finalizado = job.waitForCompletion(true);
                     System.out.println("Finalizado: " + finalizado);
                     return null;
