@@ -25,26 +25,12 @@ public class P22_MapReduce {
 
     public static class MapClass extends Mapper<LongWritable, Text, Text, IntWritable> {
 
-//        private CustomMinMaxTuple outTuple = new CustomMinMaxTuple();
-//        private Text subject = new Text();
-//        private static final long UNO = 1L;
         public void map(LongWritable key, Text value, Context context) {
             try {
                 String[] str = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))", -2); // --> Regex para no coger las comas que están dentro de unas comillas 
                 // El -2 indica que se incluirán todos los elementos del texto, incluso si hay campos vacíos al final.
                 String subject = str[2];
 
-//                if (!(subject.equals("subject"))) { // Para saltarnos el valor literal "subject" de la primera línea
-////                    outTuple.setCount(UNO);
-////                    String[] date = str[3].split(", ");
-////                    
-////                    System.out.println(yearInt);
-////                    outTuple.setYear(yearInt);
-//                    String[] date = str[3].split(", ");
-//                    String year = date[1].replace("\"", "");
-//                    int yearInt = Integer.parseInt(year);
-//                    context.write(new Text(subject), new IntWritable(yearInt));
-//                }
                 if (!subject.equals("subject")) {
                     String[] date = str[3].split("-|, ");
                     String year = date[date.length - 1].replace("\"", "");
@@ -72,35 +58,18 @@ public class P22_MapReduce {
     }
 
     public static class ReduceClass extends Reducer<Text, IntWritable, Text, IntWritable> {
-//        private CustomMinMaxTuple resultado = new CustomMinMaxTuple();
 
         public void reduce(Text key, Iterable<IntWritable> values, Context context) {
 
             try {
-//                resultado.setCount(0);
-//                
-//                long sum = 0;
-//                for (CustomMinMaxTuple val : values){
-//                    sum += val.getCount();
-//                    resultado.setCount(sum);
-//                }
-//                context.write(key, resultado);
                 int sum = 0;
                 for (IntWritable val : values) {
                     sum += 1;
-//                    String[] datos = val.toString().split(",");
-//                    String subject = datos[0];
 
                 }
-                System.out.println("La key es: " + key.toString());
-                System.out.println("Y su suma es:" + sum);
+//                System.out.println("La key es: " + key.toString()); // --> Para comprobar si funciona bien 
+//                System.out.println("Y su suma es:" + sum);
                 context.write(key, new IntWritable(sum)); // --> No escribe todas las keys
-//                
-//                int sum = 0;
-//                for (IntWritable val : values) {
-//                    sum += val.get();
-//                }
-//                context.write(key, new IntWritable(sum));
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
@@ -137,10 +106,9 @@ public class P22_MapReduce {
                 public Void run() throws Exception {
                     Configuration conf = new Configuration();
                     conf.set("fs.defaultFS", "hdfs://192.168.10.1:9000");
-                    Job job = Job.getInstance(conf, "topsal");
+                    Job job = Job.getInstance(conf, "fakeNewsCount");
                     job.setJarByClass(P22_MapReduce.class);
                     job.setMapperClass(MapClass.class);
-                    job.setCombinerClass(ReduceClass.class);
                     job.setReducerClass(ReduceClass.class);
                     job.setMapOutputKeyClass(Text.class);
                     job.setMapOutputValueClass(IntWritable.class);
