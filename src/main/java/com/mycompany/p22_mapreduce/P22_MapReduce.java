@@ -11,6 +11,7 @@ import java.io.*;
 import java.security.PrivilegedExceptionAction;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.io.*;
@@ -99,7 +100,34 @@ public class P22_MapReduce {
     
     public static void main(String[] args) {
 // Establecemos las configuraciones correspondientes añadiendo las de los partitioners:
+        Scanner scan = new Scanner(System.in);
         UserGroupInformation ugi = UserGroupInformation.createRemoteUser("a_83026");
+        System.out.println("Tiene la posibilidad de analizar unas bases de datos que recogen noticias falsas y ciertas que han aparecido en periódicos de EEUU.");
+        boolean salir = false;
+        while(!salir){
+            System.out.println("Indique la opción que desea realizar:");
+            System.out.println("1.- Analizar la base de datos de noticias falsas.");
+            System.out.println("2.- Analizar la base de datos de noticias verídicas.");
+            System.out.println("3.- Salir");
+            int opcion = scan.nextInt();
+            switch (opcion){
+                case 1:
+                    AnalisisFakeNews(ugi);
+                    break;
+                case 2:
+                    AnalisisTrueNews(ugi);
+                    break;
+                case 3:
+                    salir = true;
+                    break;
+                default:
+                    System.out.println("¡Opción incorrecta!");
+            }
+        }
+        
+    }
+    
+    private static void AnalisisFakeNews (UserGroupInformation ugi){
         try {
             ugi.doAs(new PrivilegedExceptionAction<Void>() {
                 @Override
@@ -120,8 +148,42 @@ public class P22_MapReduce {
                     job.setOutputFormatClass(TextOutputFormat.class);
                     job.setOutputKeyClass(Text.class);
                     job.setOutputValueClass(IntWritable.class);
-                    FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews"));
-                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionado"));
+                    FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews/FakeNews"));
+                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionadoFake"));
+                    boolean finalizado = job.waitForCompletion(true);
+                    System.out.println("Finalizado: " + finalizado);
+                    return null;
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Excepcion capturada: " + e.getMessage());
+            e.printStackTrace(System.err);
+        }
+    }
+    
+    private static void AnalisisTrueNews (UserGroupInformation ugi){
+        try {
+            ugi.doAs(new PrivilegedExceptionAction<Void>() {
+                @Override
+                public Void run() throws Exception {
+                    Configuration conf = new Configuration();
+                    conf.set("fs.defaultFS", "hdfs://192.168.10.1:9000");
+                    Job job = Job.getInstance(conf, "trueNewsCount");
+                    job.setJarByClass(P22_MapReduce.class);
+                    job.setMapperClass(MapClass.class);
+                    job.setReducerClass(ReduceClass.class);
+                    job.setMapOutputKeyClass(Text.class);
+                    job.setMapOutputValueClass(IntWritable.class);
+
+                    //set partitioner statement
+                    job.setPartitionerClass(CaderPartitioner.class);
+                    job.setNumReduceTasks(3);
+                    job.setInputFormatClass(TextInputFormat.class);
+                    job.setOutputFormatClass(TextOutputFormat.class);
+                    job.setOutputKeyClass(Text.class);
+                    job.setOutputValueClass(IntWritable.class);
+                    FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews/TrueNews")); // --> HAY QUE CAMBIAR ESTO
+                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionadoTrue"));
                     boolean finalizado = job.waitForCompletion(true);
                     System.out.println("Finalizado: " + finalizado);
                     return null;
