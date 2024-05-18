@@ -28,16 +28,16 @@ public class P22_MapReduce {
 
         public void map(LongWritable key, Text value, Context context) {
             try {
-                String[] str = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))", -2); // --> Regex para no coger las comas que están dentro de unas comillas 
+                String[] str = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))", -2); // --> Regex para no coger las comas que están dentro de unas comillas de nuestro archivo csv.
                 // El -2 indica que se incluirán todos los elementos del texto, incluso si hay campos vacíos al final.
                 String subject = str[2];
 
                 if (!subject.equals("subject")) {
-                    String[] date = str[3].split("-|, ");
-                    String year = date[date.length - 1].replace("\"", "");
+                    String[] date = str[3].split("-|, "); // --> Con esta regex le decimos que separe por coma o por guiones, ya que había dos formatos de fechas ("dia mes, año" y "dia-mes-año")
+                    String year = date[date.length - 1].replace("\"", ""); // Aquí limpiamos el deato del año quitando las comillas del final
 
                     // Regex para extraer el año de la fecha
-                    String regex = "\\d{4}|\\d{2}$";
+                    String regex = "\\d{4}|\\d{2}$"; // Las fechas con el formato de guiones solo aparecen los dos últimos dígitos
                     Pattern pattern = Pattern.compile(regex);
 
                     // Extracción del año de la fecha y conversión al formato numérico
@@ -45,15 +45,15 @@ public class P22_MapReduce {
                     if (matcher.find()) {
                         String yearMatch = matcher.group();
                         if (yearMatch.length() == 2) {
-                            yearMatch = "20" + yearMatch;
+                            yearMatch = "20" + yearMatch; // Para aquellas fechas que solo tienen dos dígitos añadimos el 20 para que luego funcione correctamente el partitioner
                         }
                         int yearInt = Integer.parseInt(yearMatch);
                         context.write(new Text(subject), new IntWritable(yearInt));
                     }
                 }
             } catch (Exception e) {
-//                System.err.println(value.toString()); --> Esto era para comprobar y saber donde estaba el error
-                e.printStackTrace();
+                System.err.println("Excepcion capturada: " + e.getMessage());
+                e.printStackTrace(System.err);
             }
         }
     }
@@ -61,33 +61,30 @@ public class P22_MapReduce {
     public static class ReduceClass extends Reducer<Text, IntWritable, Text, IntWritable> {
 
         public void reduce(Text key, Iterable<IntWritable> values, Context context) {
-
             try {
                 int sum = 0;
+                // Aumentamos el contador de cada categoría según su aparición
                 for (IntWritable val : values) {
                     sum += 1;
-
                 }
-//                System.out.println("La key es: " + key.toString()); // --> Para comprobar si funciona bien 
-//                System.out.println("Y su suma es:" + sum);
-                context.write(key, new IntWritable(sum)); // --> No escribe todas las keys
+                context.write(key, new IntWritable(sum));
             } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Excepcion capturada: " + e.getMessage());
+                e.printStackTrace(System.err);
             }
         }
     }
 
     public static class CaderPartitioner extends Partitioner<Text, IntWritable> {
-
+        
         @Override
         public int getPartition(Text key, IntWritable value, int numReduceTasks) {
-            // Entrada partitioner: los datos completos en una colección de pares clave-valor.
             int year = Integer.parseInt(value.toString());
             
             if (numReduceTasks == 0) {
                 return 0;
             }
-            // "Partimos" los datos según los criterios de edad que se nos idican:
+            // "Partimos" los datos según el año de publicación de la noticia:
             if (year <= 2015) {
                 return 0;
             } else if (year > 2015 && year <= 2016) {
@@ -99,23 +96,37 @@ public class P22_MapReduce {
     }
     
     public static void main(String[] args) {
-// Establecemos las configuraciones correspondientes añadiendo las de los partitioners:
+        // Creamos un menú para que sea el usuario quien decida si quiere usar el programa en el archivo de noticias falsas o en el de noticias verdaderas.
+        
         Scanner scan = new Scanner(System.in);
         UserGroupInformation ugi = UserGroupInformation.createRemoteUser("a_83026");
         System.out.println("Tiene la posibilidad de analizar unas bases de datos que recogen noticias falsas y ciertas que han aparecido en periódicos de EEUU.");
         boolean salir = false;
-        while(!salir){
+        boolean analizadoFakeNews = false;
+        boolean analizadoTrueNews = false;
+
+        while (!salir) {
             System.out.println("Indique la opción que desea realizar:");
             System.out.println("1.- Analizar la base de datos de noticias falsas.");
             System.out.println("2.- Analizar la base de datos de noticias verídicas.");
-            System.out.println("3.- Salir");
+            System.out.println("3.- Salir.");
             int opcion = scan.nextInt();
-            switch (opcion){
+            switch (opcion) {
                 case 1:
-                    AnalisisFakeNews(ugi);
+                    if (!analizadoFakeNews) {
+                        AnalisisFakeNews(ugi);
+                        analizadoFakeNews = true;
+                    } else {
+                        System.out.println("Ya has analizado la base de datos de noticias falsas.");
+                    }
                     break;
                 case 2:
-                    AnalisisTrueNews(ugi);
+                    if (!analizadoTrueNews) {
+                        AnalisisTrueNews(ugi);
+                        analizadoTrueNews = true;
+                    } else {
+                        System.out.println("Ya has analizado la base de datos de noticias verídicas.");
+                    }
                     break;
                 case 3:
                     salir = true;
@@ -123,11 +134,18 @@ public class P22_MapReduce {
                 default:
                     System.out.println("¡Opción incorrecta!");
             }
+
+            // Salir del bucle si ambas bases de datos han sido analizadas
+            if (analizadoFakeNews && analizadoTrueNews) {
+                System.out.println("Ya has analizado los dos archivos, ahora lee los resultados en tu terminal.");
+                salir = true;
+            }
         }
-        
+        scan.close();
     }
     
     private static void AnalisisFakeNews (UserGroupInformation ugi){
+        System.out.println("Analizando la base de datos de noticias falsas...");
         try {
             ugi.doAs(new PrivilegedExceptionAction<Void>() {
                 @Override
@@ -151,7 +169,7 @@ public class P22_MapReduce {
                     FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews/FakeNews"));
                     FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionadoFake"));
                     boolean finalizado = job.waitForCompletion(true);
-                    System.out.println("Finalizado: " + finalizado);
+                    System.out.println("Finalizado el análisis de Fake.csv: " + finalizado);
                     return null;
                 }
             });
@@ -162,6 +180,7 @@ public class P22_MapReduce {
     }
     
     private static void AnalisisTrueNews (UserGroupInformation ugi){
+        System.out.println("Analizando la base de datos de noticias verídicas...");
         try {
             ugi.doAs(new PrivilegedExceptionAction<Void>() {
                 @Override
@@ -182,10 +201,10 @@ public class P22_MapReduce {
                     job.setOutputFormatClass(TextOutputFormat.class);
                     job.setOutputKeyClass(Text.class);
                     job.setOutputValueClass(IntWritable.class);
-                    FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews/TrueNews")); // --> HAY QUE CAMBIAR ESTO
+                    FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews/TrueNews")); 
                     FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionadoTrue"));
                     boolean finalizado = job.waitForCompletion(true);
-                    System.out.println("Finalizado: " + finalizado);
+                    System.out.println("Finalizado el análisis de True.csv: " + finalizado);
                     return null;
                 }
             });
