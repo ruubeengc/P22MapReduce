@@ -99,7 +99,7 @@ public class P22_MapReduce {
         // Creamos un menú para que sea el usuario quien decida si quiere usar el programa en el archivo de noticias falsas o en el de noticias verdaderas.
         
         Scanner scan = new Scanner(System.in);
-        UserGroupInformation ugi = UserGroupInformation.createRemoteUser("a_83026");
+        UserGroupInformation ugi = UserGroupInformation.createRemoteUser("a_830XX"); // --> Indicar el nombre de usuario correspondiente
         System.out.println("Tiene la posibilidad de analizar unas bases de datos que recogen noticias falsas y ciertas que han aparecido en periódicos de EEUU.");
         boolean salir = false;
         boolean analizadoFakeNews = false;
@@ -166,8 +166,8 @@ public class P22_MapReduce {
                     job.setOutputFormatClass(TextOutputFormat.class);
                     job.setOutputKeyClass(Text.class);
                     job.setOutputValueClass(IntWritable.class);
-                    FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews/FakeNews"));
-                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionadoFake"));
+                    FileInputFormat.addInputPath(job, new Path("/PCD2024/a_830XX/ArchivosCSV")); // --> Indicar la ruta del directorio donde se encuentren los archivos que se van analizar.
+                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_830XX/SalidaArchivoFake")); // --> Indicar el directorio donde se desea guardar el análisis una vez finalizado.
                     boolean finalizado = job.waitForCompletion(true);
                     System.out.println("Finalizado el análisis de Fake.csv: " + finalizado);
                     return null;
@@ -201,8 +201,8 @@ public class P22_MapReduce {
                     job.setOutputFormatClass(TextOutputFormat.class);
                     job.setOutputKeyClass(Text.class);
                     job.setOutputValueClass(IntWritable.class);
-                    FileInputFormat.addInputPath(job, new Path("/PCD2024/a_83026/DatosNews/TrueNews")); 
-                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_83026/DatosNews_SalidaFechasParticionadoTrue"));
+                    FileInputFormat.addInputPath(job, new Path("/PCD2024/a_830XX/ArchivosCSV")); // --> Indicar la ruta del directorio donde se encuentren los archivos que se van a analizar.
+                    FileOutputFormat.setOutputPath(job, new Path("/PCD2024/a_830XX/SalidaArchivoTrue")); // --> Indicar el directorio donde se desea guardar el análisis una vez finalizado.
                     boolean finalizado = job.waitForCompletion(true);
                     System.out.println("Finalizado el análisis de True.csv: " + finalizado);
                     return null;
